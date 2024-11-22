@@ -19,6 +19,13 @@
 
     <div id="threads-list"></div>
 
+    <script>
+        function sanitizeHTML(str) {
+            const tempDiv = document.createElement('div');
+            tempDiv.textContent = str;
+            return tempDiv.innerHTML;
+        }
+    </script>
     <script type="module">
         import { setDatabase, createThreadElement, attachCommentEventHandlers } from './threads_module.js';
         import { setDatabase as setCommentsDatabase, handleAddComment } from './comments_module.js';

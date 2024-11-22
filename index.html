@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commenting System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <button id="theme-toggle">Toggle Theme</button>
+    <textarea id="custom-css" placeholder="Enter custom CSS"></textarea>
+    <button id="apply-css">Apply Custom CSS</button>
+
+    <div id="create-thread-container">
+        <input type="text" id="new-thread-title" placeholder="Thread title">
+        <textarea id="new-thread-content" placeholder="Thread content"></textarea>
+        <button id="create-thread">Create Thread</button>
+    </div>
+
+    <div id="threads-list"></div>
+
+    <script type="module">
+        import { setDatabase, createThreadElement, attachCommentEventHandlers } from './threads_module.js';
+        import { setDatabase as setCommentsDatabase } from './comments_module.js';
+        import './theme_and_css_handler.js';
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const dbName = "commentSiteDB";
+            let db;
+
+            // Initialize IndexedDB
+            const request = indexedDB.open(dbName, 8);
+
+            request.onupgradeneeded = (event) => {
+                db = event.target.result;
+                if (!db.objectStoreNames.contains("threads")) {
+                    db.createObjectStore("threads", { keyPath: "id", autoIncrement: true });
+                }
+                if (!db.objectStoreNames.contains("comments")) {
+                    const commentStore = db.createObjectStore("comments", { keyPath: "id", autoIncrement: true });
+                    commentStore.createIndex("threadId", "threadId", { unique: false });
+                }
+                if (!db.objectStoreNames.contains("votes")) {
+                    db.createObjectStore("votes", { keyPath: "threadId" });
+                }
+            };
+
+            request.onsuccess = (event) => {
+                db = event.target.result;
+                setDatabase(db);
+                setCommentsDatabase(db);
+                initializeThreads();
+            };
+
+            request.onerror = (event) => console.error("Error opening IndexedDB: ", event.target.errorCode);
+        });
+
+        function initializeThreads() {
+            const threadsSection = document.getElementById("threads-list");
+            threadsSection.innerHTML = "";
+            db.transaction("threads", "readonly").objectStore("threads").getAll().onsuccess = (event) => {
+                event.target.result.forEach(thread => {
+                    const threadElement = createThreadElement(thread);
+                    threadsSection.appendChild(threadElement);
+                    attachCommentEventHandlers(threadElement);
+                });
+            };
+        }
+    </script>
+</body>
+</html>

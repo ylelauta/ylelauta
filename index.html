@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Commenting System</title>
-    <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <button id="theme-toggle">Toggle Theme</button>
@@ -20,13 +20,17 @@
     <div id="threads-list"></div>
 
     <script type="module">
+        // IMPORTANT: Please run this HTML file through a local server to avoid CORS issues.
+        // You can use Python's HTTP server by running: python -m http.server
+
         import { setDatabase, createThreadElement, attachCommentEventHandlers } from './threads_module.js';
         import { setDatabase as setCommentsDatabase } from './comments_module.js';
         import './theme_and_css_handler.js';
 
+        let db; // Define db variable globally
+
         document.addEventListener("DOMContentLoaded", () => {
             const dbName = "commentSiteDB";
-            let db;
 
             // Initialize IndexedDB
             const request = indexedDB.open(dbName, 8);
@@ -56,6 +60,10 @@
         });
 
         function initializeThreads() {
+            if (!db) {
+                console.error("Database is not initialized.");
+                return;
+            }
             const threadsSection = document.getElementById("threads-list");
             threadsSection.innerHTML = "";
             db.transaction("threads", "readonly").objectStore("threads").getAll().onsuccess = (event) => {

@@ -53,7 +53,12 @@
                 db = event.target.result;
                 setDatabase(db);
                 setCommentsDatabase(db);
-                initializeThreads();
+                // Delay the call to initializeThreads to ensure db is initialized
+                setTimeout(() => {
+                    if (db) {
+                        initializeThreads();
+                    }
+                }, 100);
             };
 
             request.onerror = (event) => console.error("Error opening IndexedDB: ", event.target.errorCode);

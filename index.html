@@ -51,9 +51,13 @@
 
             request.onsuccess = (event) => {
                 db = event.target.result;
-                setDatabase(db);
-                setCommentsDatabase(db);
-                initializeThreads();
+                if (db) {
+                    setDatabase(db);
+                    setCommentsDatabase(db);
+                    initializeThreads();
+                } else {
+                    console.error("Database initialization failed.");
+                }
             };
 
             request.onerror = (event) => console.error("Error opening IndexedDB: ", event.target.errorCode);

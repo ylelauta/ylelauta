@@ -27,7 +27,7 @@
         }
     </script>
     <script type="module">
-        import { setDatabase, createThreadElement, attachCommentEventHandlers } from './threads_module.js';
+        import { setDatabase, createThreadElement, attachCommentEventHandlers, handleAddComment } from './threads_module.js';
         import { setDatabase as setCommentsDatabase, handleAddComment } from './comments_module.js';
         import './theme_and_css_handler.js';
 
@@ -118,6 +118,7 @@
         function setupThreadCreation() {
             const createThreadButton = document.getElementById("create-thread");
             createThreadButton.addEventListener("click", () => {
+                createThreadButton.disabled = true;
                 const title = document.getElementById("new-thread-title").value.trim();
                 const content = document.getElementById("new-thread-content").value.trim();
 
@@ -126,6 +127,7 @@
                     const store = transaction.objectStore("threads");
                     const thread = { title, content, votes: 0 };
                     store.add(thread).onsuccess = () => {
+                        createThreadButton.disabled = false;
                         initializeThreads();
                     };
                 } else {

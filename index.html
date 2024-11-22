@@ -53,12 +53,7 @@
                 db = event.target.result;
                 setDatabase(db);
                 setCommentsDatabase(db);
-                // Delay the call to initializeThreads to ensure db is initialized
-                setTimeout(() => {
-                    if (db) {
-                        initializeThreads();
-                    }
-                }, 100);
+                initializeThreads();
             };
 
             request.onerror = (event) => console.error("Error opening IndexedDB: ", event.target.errorCode);
@@ -71,13 +66,19 @@
             }
             const threadsSection = document.getElementById("threads-list");
             threadsSection.innerHTML = "";
-            db.transaction("threads", "readonly").objectStore("threads").getAll().onsuccess = (event) => {
+            const transaction = db.transaction("threads", "readonly");
+            const objectStore = transaction.objectStore("threads");
+            const request = objectStore.getAll();
+
+            request.onsuccess = (event) => {
                 event.target.result.forEach(thread => {
                     const threadElement = createThreadElement(thread);
                     threadsSection.appendChild(threadElement);
                     attachCommentEventHandlers(threadElement);
                 });
             };
+
+            request.onerror = (event) => console.error("Error fetching threads: ", event.target.errorCode);
         }
     </script>
 </body>

@@ -1,5 +1,5 @@
 import * as Y from 'https://cdn.jsdelivr.net/npm/yjs@13.5.47/dist/yjs.mjs';
-import { WebsocketProvider } from 'https://cdn.jsdelivr.net/npm/yjs@13.5.47/dist/yjs.mjs';
+import { WebsocketProvider } from 'https://raw.githubusercontent.com/yjs/y-websocket/refs/heads/master/src/y-websocket.js';
 
 // Luo Y.js-dokumentti
 const ydoc = new Y.Doc();

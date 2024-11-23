@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Itseorganisoituva Järjestelmä</title>
   <link rel="stylesheet" href="styles.css">
+  <script type="module" src="./database.js"></script> <!-- Hallitsee keskustelualueen tallennuksen ja synkronoinnin -->
+  <script type="module" src="./sync.js"></script> <!-- Synkronointi Yjs:llä ja WebSocket-yhteydellä -->
+  <script type="module" src="./merkle.js"></script> <!-- Hajautus- ja Merkle-puualgoritmit -->
+  <script type="module" src="./roles.js"></script> <!-- Käyttäjäroolit ja niiden hallinta -->
+  <script type="module" src="./trust.js"></script> <!-- Luottamuspisteiden laskenta ja hallinta -->
+  <script type="module" src="./app.js"></script> <!-- Sovelluksen yleinen käyttöliittymän hallinta -->
 </head>
 <body>
   <header>
@@ -43,13 +49,5 @@
   <footer>
     <p>Suunniteltu yhteisölliseen toimintaan ja hajautettuun hallintaan.</p>
   </footer>
-
-  <!-- Ladataan JavaScript-tiedostot -->
-  <script type="module" src="https://ylelauta.github.io/ylelauta/y-websocket.mjs"></script>
-  <script type="module" src="./database.js"></script> <!-- Hallitsee keskustelualueen tallennuksen ja synkronoinnin -->
-  <script type="module" src="./sync.js"></script> <!-- Synkronointi Yjs:llä ja WebSocket-yhteydellä -->
-  <script type="module" src="./merkle.js"></script> <!-- Hajautus- ja Merkle-puualgoritmit -->
-  <script type="module" src="./roles.js"></script> <!-- Käyttäjäroolit ja niiden hallinta -->
-  <script type="module" src="./trust.js"></script> <!-- Luottamuspisteiden laskenta ja hallinta -->
-  <script type="module" src="./app.js"></script> <!-- Sovelluksen yleinen käyttöliittymän hallinta -->
+  
 </html>

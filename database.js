@@ -1,4 +1,4 @@
-import * as Y from "./yjs.mjs";
+import * as Y from "./yjs.js";
 import { WebsocketProvider } from "./y-websocket.js";
 
 document.addEventListener("DOMContentLoaded", () => {

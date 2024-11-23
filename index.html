@@ -25,8 +25,8 @@
     <!-- Äänestysalue -->
     <section id="voting-section">
       <h2>Äänestys</h2>
-      <div id="vote-results">
         <!-- Äänestystulokset renderöidään tänne -->
+      <div id="vote-results">
       </div>
       <button id="new-vote">Aloita Äänestys</button>
     </section>
@@ -45,11 +45,10 @@
   </footer>
 
   <!-- Ladataan JavaScript-tiedostot -->
-  <script type="module" src="./database.js"></script>
-  <script type="module" src="./sync.js"></script>
-  <script type="module" src="./merkle.js"></script>
-  <script type="module" src="./roles.js"></script>
-  <script type="module" src="./trust.js"></script>
-  <script type="module" src="./app.js"></script>
-</body>
+  <script type="module" src="./database.js"></script> <!-- Hallitsee keskustelualueen tallennuksen ja synkronoinnin -->
+  <script type="module" src="./sync.js"></script> <!-- Synkronointi Yjs:llä ja WebSocket-yhteydellä -->
+  <script type="module" src="./merkle.js"></script> <!-- Hajautus- ja Merkle-puualgoritmit -->
+  <script type="module" src="./roles.js"></script> <!-- Käyttäjäroolit ja niiden hallinta -->
+  <script type="module" src="./trust.js"></script> <!-- Luottamuspisteiden laskenta ja hallinta -->
+  <script type="module" src="./app.js"></script> <!-- Sovelluksen yleinen käyttöliittymän hallinta -->
 </html>

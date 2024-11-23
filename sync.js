@@ -1,6 +1,11 @@
+import { WebrtcProvider } from 'y-webrtc';
+import * as Y from 'yjs';
 import { getMerkleRoot, verifyItem } from './merkle.js';
 import { saveMessage, getMessages, saveVote, getVotes } from './database.js';
 
+
+const ydoc = new Y.Doc();
+const provider = new WebrtcProvider('room-id', ydoc);
 const peers = {}; // Aktiiviset vertaisverkko-yhteydet
 let signalingServer; // Signaalointipalvelin yhteyden muodostamiseksi
 

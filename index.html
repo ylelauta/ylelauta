@@ -13,35 +13,27 @@
     <h1>Itseorganisoituva Sovellus</h1>
     <p>Luottamus, yhteisöllisyys ja hajautettu hallinta</p>
   </header>
-  
   <main>
-    <section id="forum">
+    <!-- Viestit -->
+    <section id="messages-section">
       <h2>Keskustelupalsta</h2>
       <div id="messages"></div>
       <textarea id="new-message" placeholder="Kirjoita viesti..."></textarea>
       <button id="send-message">Lähetä</button>
     </section>
 
-    <section id="voting">
-      <h2>CRDT-pohjainen Äänestys</h2>
+    <!-- Äänestys -->
+    <section id="voting-section">
+      <h2>Äänestys</h2>
       <button id="new-vote">Aloita Äänestys</button>
-      <ul id="vote-options"></ul>
-      <p>Tulokset:</p>
       <ul id="vote-results"></ul>
     </section>
 
-    <section id="roles">
-      <h2>Roolit</h2>
+    <!-- Roolit ja pisteet -->
+    <section id="user-section">
+      <h2>Käyttäjä</h2>
       <p id="user-role">Roolisi: Tarkkailija</p>
-    </section>
-
-    <section id="scores">
-      <h2>Pisteet</h2>
       <p id="user-score">Pisteesi: 0</p>
-    </section>
-
-    <section id="uptime">
-      <h2>Merkle-puu & Proof of Uptime</h2>
       <p id="uptime-status">Ylläpitoaika: 0h</p>
     </section>
   </main>

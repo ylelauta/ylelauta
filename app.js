@@ -1,72 +1,93 @@
-import { initDB, saveMessage, getMessages, saveVote, getVotes } from './database.js';
-import { syncWithPeers } from './sync.js';
-import { calculateUptime, updateMerkleTree } from './merkle.js';
-import { updateRole, getRole } from './roles.js';
-import { updateTrust, getScore } from './trust.js';
+import * as Y from 'yjs';
+import { WebrtcProvider } from 'y-webrtc';
+import { IndexeddbPersistence } from 'y-indexeddb';
 
+// Luo Y.js-dokumentti
+const ydoc = new Y.Doc();
+
+// WebRTC-synkronointi
+const webrtcProvider = new WebrtcProvider('your-room-id', ydoc);
+
+// IndexedDB-persistenssi paikalliseen tallennukseen
+const persistence = new IndexeddbPersistence('distributedApp', ydoc);
+
+// Luo CRDT-taulukot
+const messages = ydoc.getArray('messages');
+const votes = ydoc.getArray('votes');
+
+// Valitse HTML-elementit
 const messageInput = document.getElementById('new-message');
 const sendButton = document.getElementById('send-message');
 const voteButton = document.getElementById('new-vote');
+const messagesDiv = document.getElementById('messages');
+const voteResults = document.getElementById('vote-results');
 
 // Lähetä uusi viesti
-sendButton.addEventListener('click', async () => {
+sendButton.addEventListener('click', () => {
   const content = messageInput.value.trim();
   if (content) {
-    await saveMessage(content);
-    await syncWithPeers();
-    renderMessages();
-    messageInput.value = '';
-  renderMessages();
-}
-});
-
-// Aloita uusi äänestys
-voteButton.addEventListener('click', async () => {
-  const option = prompt("Kirjoita äänestettävä vaihtoehto:");
-  if (option) {
-    await saveVote(option);
-    await syncWithPeers();
-    renderVotes();
+    messages.push([{ id: Date.now(), content }]); // Lisää viesti CRDT-taulukkoon
+    messageInput.value = ''; // Tyhjennä kenttä
+    renderMessages(); // Päivitä näkymä
   }
 });
 
-async function renderMessages() {
-  const messages = await getMessages();
-  const messagesDiv = document.getElementById('messages');
-  messagesDiv.innerHTML = '';
-  messages.forEach(msg => {
+// Aloita uusi äänestys
+voteButton.addEventListener('click', () => {
+  const option = prompt("Kirjoita äänestettävä vaihtoehto:");
+  if (option) {
+    const existingVote = votes.find(vote => vote.option === option);
+    if (existingVote) {
+      existingVote.count += 1; // Lisää ääni olemassa olevaan vaihtoehtoon
+    } else {
+      votes.push([{ id: Date.now(), option, count: 1 }]); // Luo uusi vaihtoehto
+    }
+    renderVotes(); // Päivitä näkymä
+  }
+});
+
+// Renderöi viestit HTML-näkymään
+function renderMessages() {
+  messagesDiv.innerHTML = ''; // Tyhjennä viestialue
+  messages.toArray().forEach(msg => {
     const p = document.createElement('p');
-    p.textContent = msg;
+    p.textContent = msg.content;
     messagesDiv.appendChild(p);
   });
 }
 
-async function renderVotes() {
-  const votes = await getVotes();
-  const voteList = document.getElementById('vote-results');
-  voteList.innerHTML = '';
-  votes.forEach(vote => {
+// Renderöi äänestystulokset HTML-näkymään
+function renderVotes() {
+  voteResults.innerHTML = ''; // Tyhjennä tulokset
+  votes.toArray().forEach(vote => {
     const li = document.createElement('li');
     li.textContent = `${vote.option} (${vote.count} ääntä)`;
-    voteList.appendChild(li);
+    voteResults.appendChild(li);
   });
 }
 
 // Päivitä käyttöliittymän tilat
 async function updateUI() {
-  const role = await getRole();
-  const score = await getScore();
-  const uptime = await calculateUptime();
-
-  document.getElementById('user-role').textContent = `Roolisi: ${role}`;
-  document.getElementById('user-score').textContent = `Pisteesi: ${score}`;
-  document.getElementById('uptime-status').textContent = `Ylläpitoaika: ${uptime}h`;
+  // Näyteominaisuuksia kuten roolit ja pisteet voidaan päivittää tässä, esim:
+  document.getElementById('user-role').textContent = 'Roolisi: Tarkkailija';
+  document.getElementById('user-score').textContent = 'Pisteesi: 10';
+  document.getElementById('uptime-status').textContent = 'Ylläpitoaika: 5h';
 }
 
-// Alusta sovellus
-initDB().then(() => {
-  syncWithPeers();
+// Synkronoi data ja alusta käyttöliittymä
+persistence.on('synced', () => {
+  console.log('Paikallinen tallennus synkronoitu.');
   renderMessages();
   renderVotes();
-  updateUI();
 });
+
+webrtcProvider.on('synced', () => {
+  console.log('WebRTC-synkronointi valmis.');
+  renderMessages();
+  renderVotes();
+});
+
+// Ensimmäinen renderöinti
+renderMessages();
+renderVotes();
+updateUI();

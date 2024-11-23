@@ -1,13 +1,17 @@
-import { messages, votes } from './database.js';
+import * as Y from 'yjs';
+import { IndexeddbPersistence } from 'y-indexeddb';
 
-// Lisää uusi viesti
-messages.push([{ id: Date.now(), content: 'Hello Y.js!' }]);
+// Luo Y.js-dokumentti
+const ydoc = new Y.Doc();
 
-// Tulosta kaikki viestit
-console.log(messages.toArray());
+// IndexedDB-persistenssi
+const persistence = new IndexeddbPersistence('distributedApp', ydoc);
 
-// Lisää uusi äänestysvaihtoehto
-votes.push([{ id: Date.now(), option: 'Option A', count: 1 }]);
+// Luo CRDT-taulukot
+export const messages = ydoc.getArray('messages'); // Viestit
+export const votes = ydoc.getArray('votes'); // Äänet
 
-// Tulosta kaikki äänestykset
-console.log(votes.toArray());
+// Synkronointiloki
+persistence.on('synced', () => {
+  console.log('Y.js-dokumentti synkronoitu IndexedDB:n kanssa.');
+});

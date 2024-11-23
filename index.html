@@ -13,22 +13,26 @@
     <p>Luottamus, yhteisöllisyys ja hajautettu hallinta</p>
   </header>
   <main>
-    <!-- Viestit -->
+    <!-- Keskustelualue -->
     <section id="messages-section">
-      <h2>Keskustelupalsta</h2>
-      <div id="messages"></div>
+      <h2>Keskustelu</h2>
+      <div id="messages">
+        <!-- Viestit renderöidään tänne -->
+      </div>
       <textarea id="new-message" placeholder="Kirjoita viesti..."></textarea>
       <button id="send-message">Lähetä</button>
     </section>
 
-    <!-- Äänestys -->
+    <!-- Äänestysalue -->
     <section id="voting-section">
       <h2>Äänestys</h2>
+      <div id="vote-results">
+        <!-- Äänestystulokset renderöidään tänne -->
+      </div>
       <button id="new-vote">Aloita Äänestys</button>
-      <ul id="vote-results"></ul>
     </section>
 
-    <!-- Roolit ja pisteet -->
+    <!-- Käyttäjäprofiili -->
     <section id="user-section">
       <h2>Käyttäjä</h2>
       <p id="user-role">Roolisi: Tarkkailija</p>
@@ -36,11 +40,17 @@
       <p id="uptime-status">Ylläpitoaika: 0h</p>
     </section>
   </main>
-
+  
   <footer>
     <p>Suunniteltu yhteisölliseen hallintaan ja hajautettuun toimintaan.</p>
   </footer>
 
-  <script src="app.js" type="module"></script>
+  <!-- Ladataan JavaScript-tiedostot -->
+  <script type="module" src="./database.js"></script>
+  <script type="module" src="./sync.js"></script>
+  <script type="module" src="./merkle.js"></script>
+  <script type="module" src="./roles.js"></script>
+  <script type="module" src="./trust.js"></script>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>

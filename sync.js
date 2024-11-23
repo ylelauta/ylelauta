@@ -3,184 +3,89 @@ import * as Y from 'yjs';
 import { getMerkleRoot, verifyItem } from './merkle.js';
 import { saveMessage, getMessages, saveVote, getVotes } from './database.js';
 
-
+// Luo Y.js-dokumentti
 const ydoc = new Y.Doc();
+
+// WebRTC-synkronointi
 const provider = new WebrtcProvider('room-id', ydoc);
-const peers = {}; // Aktiiviset vertaisverkko-yhteydet
-let signalingServer; // Signaalointipalvelin yhteyden muodostamiseksi
+
+// CRDT-taulukot viesteille ja äänestyksille
+const messages = ydoc.getArray('messages');
+const votes = ydoc.getArray('votes');
+
+// Kuuntele Y.js-päivityksiä
+messages.observe(() => renderMessages());
+votes.observe(() => renderVotes());
 
 /**
- * Alustaa yhteyden signaalointipalvelimeen.
- * @param {string} signalingUrl - Signaalointipalvelimen URL
+ * Tallenna uusi viesti Y.js-taulukkoon
+ * @param {string} content - Viestin sisältö
  */
-export function initializeSignalingServer(signalingUrl) {
-  signalingServer = new WebSocket(signalingUrl);
-
-  signalingServer.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    if (data.type === 'offer') {
-      handleOffer(data.from, data.offer);
-    } else if (data.type === 'answer') {
-      handleAnswer(data.from, data.answer);
-    } else if (data.type === 'candidate') {
-      handleCandidate(data.from, data.candidate);
-    }
-  };
-
-  signalingServer.onopen = () => {
-    console.log('Signaalointipalvelin yhdistetty');
-  };
+export function saveMessage(content) {
+  messages.push([{ id: Date.now(), content }]);
 }
 
 /**
- * Luo WebRTC-yhteyden uuteen solmuun.
- * @param {string} peerId - Toisen solmun tunniste
+ * Palauttaa kaikki viestit
+ * @returns {Array} - Lista viesteistä
  */
-export function connectToPeer(peerId) {
-  if (peers[peerId]) return; // Yhteys on jo olemassa
+export function getMessages() {
+  return messages.toArray();
+}
 
-  const peer = new RTCPeerConnection();
-  peers[peerId] = peer;
-
-  peer.onicecandidate = (event) => {
-    if (event.candidate) {
-      signalingServer.send(
-        JSON.stringify({
-          type: 'candidate',
-          to: peerId,
-          candidate: event.candidate,
-        })
-      );
-    }
-  };
-
-  peer.ondatachannel = (event) => {
-    setupDataChannel(peerId, event.channel);
-  };
-
-  const dataChannel = peer.createDataChannel('data');
-  setupDataChannel(peerId, dataChannel);
-
-  peer.createOffer().then((offer) => {
-    peer.setLocalDescription(offer);
-    signalingServer.send(
-      JSON.stringify({
-        type: 'offer',
-        to: peerId,
-        offer,
-      })
+/**
+ * Lisää äänestysvaihtoehto tai kasvattaa äänten määrää
+ * @param {string} option - Äänestettävä vaihtoehto
+ */
+export function saveVote(option) {
+  const existingVote = votes.toArray().find((vote) => vote.option === option);
+  if (existingVote) {
+    const updatedVotes = votes.toArray().map((vote) =>
+      vote.option === option
+        ? { ...vote, count: vote.count + 1 }
+        : vote
     );
+    votes.delete(0, votes.length);
+    votes.push(updatedVotes);
+  } else {
+    votes.push([{ id: Date.now(), option, count: 1 }]);
+  }
+}
+
+/**
+ * Palauttaa kaikki äänestysvaihtoehdot
+ * @returns {Array} - Lista äänestysvaihtoehdoista
+ */
+export function getVotes() {
+  return votes.toArray();
+}
+
+/**
+ * Renderöi viestit käyttöliittymään
+ */
+function renderMessages() {
+  const messagesDiv = document.getElementById('messages');
+  messagesDiv.innerHTML = '';
+  getMessages().forEach((msg) => {
+    const p = document.createElement('p');
+    p.textContent = msg.content;
+    messagesDiv.appendChild(p);
   });
 }
 
 /**
- * Käsittelee saapuvan WebRTC-tarjouksen.
- * @param {string} peerId - Tarjouksen lähettäjän tunniste
- * @param {RTCSessionDescriptionInit} offer - Tarjous
+ * Renderöi äänestystulokset käyttöliittymään
  */
-function handleOffer(peerId, offer) {
-  const peer = new RTCPeerConnection();
-  peers[peerId] = peer;
-
-  peer.onicecandidate = (event) => {
-    if (event.candidate) {
-      signalingServer.send(
-        JSON.stringify({
-          type: 'candidate',
-          to: peerId,
-          candidate: event.candidate,
-        })
-      );
-    }
-  };
-
-  peer.ondatachannel = (event) => {
-    setupDataChannel(peerId, event.channel);
-  };
-
-  peer.setRemoteDescription(offer).then(() => {
-    return peer.createAnswer();
-  }).then((answer) => {
-    peer.setLocalDescription(answer);
-    signalingServer.send(
-      JSON.stringify({
-        type: 'answer',
-        to: peerId,
-        answer,
-      })
-    );
+function renderVotes() {
+  const voteList = document.getElementById('vote-results');
+  voteList.innerHTML = '';
+  getVotes().forEach((vote) => {
+    const li = document.createElement('li');
+    li.textContent = `${vote.option} (${vote.count} ääntä)`;
+    voteList.appendChild(li);
   });
 }
 
-/**
- * Käsittelee saapuvan vastauksen.
- * @param {string} peerId - Vastauksen lähettäjän tunniste
- * @param {RTCSessionDescriptionInit} answer - Vastaus
- */
-function handleAnswer(peerId, answer) {
-  const peer = peers[peerId];
-  peer.setRemoteDescription(answer);
-}
-
-/**
- * Käsittelee saapuvan ICE-kandidaatin.
- * @param {string} peerId - Kandidaatin lähettäjän tunniste
- * @param {RTCIceCandidate} candidate - ICE-kandidaatti
- */
-function handleCandidate(peerId, candidate) {
-  const peer = peers[peerId];
-  peer.addIceCandidate(candidate);
-}
-
-/**
- * Asettaa DataChannelin viestintälogiikan.
- * @param {string} peerId - Solmun tunniste
- * @param {RTCDataChannel} dataChannel - DataChannel
- */
-function setupDataChannel(peerId, dataChannel) {
-  dataChannel.onmessage = async (event) => {
-    const message = JSON.parse(event.data);
-
-    if (message.type === 'sync') {
-      await handleSync(message.data);
-    } else if (message.type === 'verify') {
-      const isValid = verifyItem(message.data);
-      console.log(`Data validointi ${isValid ? 'onnistui' : 'epäonnistui'}`);
-    }
-  };
-
-  dataChannel.onopen = () => {
-    console.log(`Yhteys avattu solmun ${peerId} kanssa`);
-    syncWithPeer(peerId);
-  };
-}
-
-/**
- * Synkronoi datan toisen solmun kanssa.
- * @param {string} peerId - Kohdesolmu
- */
-async function syncWithPeer(peerId) {
-  const messages = await getMessages();
-  const votes = await getVotes();
-
-  peers[peerId].send(
-    JSON.stringify({
-      type: 'sync',
-      data: { messages, votes },
-    })
-  );
-}
-
-/**
- * Käsittelee saapuvan synkronointipyynnön.
- * @param {Object} data - Synkronoitava data
- */
-async function handleSync(data) {
-  for (const message of data.messages) {
-    await saveMessage(message.content);
-  }
-  for (const vote of data.votes) {
-    await saveVote(vote.option);
-  }
-}
-
+// Alustetaan näkymä
+renderMessages();
+renderVotes();

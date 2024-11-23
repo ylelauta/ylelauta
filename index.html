@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Itseorganisoituva Järjestelmä</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Itseorganisoituva Sovellus</h1>
+    <p>Luottamus, yhteisöllisyys ja hajautettu hallinta</p>
+  </header>
+  
+  <main>
+    <section id="forum">
+      <h2>Keskustelupalsta</h2>
+      <div id="messages"></div>
+      <textarea id="new-message" placeholder="Kirjoita viesti..."></textarea>
+      <button id="send-message">Lähetä</button>
+    </section>
+
+    <section id="voting">
+      <h2>CRDT-pohjainen Äänestys</h2>
+      <button id="new-vote">Aloita Äänestys</button>
+      <ul id="vote-options"></ul>
+      <p>Tulokset:</p>
+      <ul id="vote-results"></ul>
+    </section>
+
+    <section id="roles">
+      <h2>Roolit</h2>
+      <p id="user-role">Roolisi: Tarkkailija</p>
+    </section>
+
+    <section id="scores">
+      <h2>Pisteet</h2>
+      <p id="user-score">Pisteesi: 0</p>
+    </section>
+
+    <section id="uptime">
+      <h2>Merkle-puu & Proof of Uptime</h2>
+      <p id="uptime-status">Ylläpitoaika: 0h</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>Suunniteltu yhteisölliseen hallintaan ja hajautettuun toimintaan.</p>
+  </footer>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>

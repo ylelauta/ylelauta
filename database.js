@@ -10,6 +10,7 @@ let votesDoc = Automerge.init();    // CRDT-dokumentti äänestyksille
 export async function initDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('distributedApp', 1);
+    const Automerge = window.Automerge;
 
     request.onupgradeneeded = (event) => {
       db = event.target.result;

@@ -1,64 +1,45 @@
-let trustProfiles = {}; // Käyttäjien luottamusprofiilit: { userId: { score, activity, feedback } }
+import * as Y from 'yjs';
+import { WebrtcProvider } from 'y-webrtc';
 
-/**
- * Päivittää käyttäjän luottamusprofiilia aktiivisuuden perusteella.
- * @param {string} userId - Käyttäjän yksilöllinen tunniste
- * @param {number} activityPoints - Aktiivisuudesta ansaitut pisteet
- */
+// Luo Y.js-dokumentti ja synkronointimekanismi
+const ydoc = new Y.Doc();
+const provider = new WebrtcProvider('trust-room', ydoc);
+
+// Hajautettu luottamusprofiilien tallennus
+const trustProfiles = ydoc.getMap('trustProfiles');
+
+// Päivitä aktiivisuuspisteet
 export function updateTrustActivity(userId, activityPoints) {
-  if (!trustProfiles[userId]) {
-    trustProfiles[userId] = { score: 0, activity: 0, feedback: [] };
-  }
-  trustProfiles[userId].activity += activityPoints;
-  calculateTrustScore(userId);
+  const profile = trustProfiles.get(userId) || { score: 0, activity: 0, feedback: [] };
+  profile.activity += activityPoints;
+  profile.score = profile.activity + profile.feedback.reduce((sum, val) => sum + val, 0);
+  trustProfiles.set(userId, profile);
 }
 
-/**
- * Lisää palautetta käyttäjälle ja päivittää pisteet.
- * @param {string} userId - Käyttäjän yksilöllinen tunniste
- * @param {boolean} positive - Positiivinen palaute (true) tai negatiivinen (false)
- */
+// Lisää palautepisteet
 export function addFeedback(userId, positive) {
-  if (!trustProfiles[userId]) {
-    trustProfiles[userId] = { score: 0, activity: 0, feedback: [] };
-  }
-  trustProfiles[userId].feedback.push(positive ? 1 : -1);
-  calculateTrustScore(userId);
+  const profile = trustProfiles.get(userId) || { score: 0, activity: 0, feedback: [] };
+  profile.feedback.push(positive ? 1 : -1);
+  profile.score = profile.activity + profile.feedback.reduce((sum, val) => sum + val, 0);
+  trustProfiles.set(userId, profile);
 }
 
-/**
- * Laskee ja päivittää käyttäjän kokonaispistemäärän.
- * @param {string} userId - Käyttäjän yksilöllinen tunniste
- */
-function calculateTrustScore(userId) {
-  const profile = trustProfiles[userId];
-  const feedbackScore = profile.feedback.reduce((sum, val) => sum + val, 0);
-  profile.score = profile.activity + feedbackScore;
-}
-
-/**
- * Palauttaa käyttäjän luottamusprofiilin tiedot.
- * @param {string} userId - Käyttäjän yksilöllinen tunniste
- * @returns {Object} - Luottamusprofiili (score, activity, feedback)
- */
+// Hae yksittäinen käyttäjäprofiili
 export function getTrustProfile(userId) {
-  return trustProfiles[userId] || { score: 0, activity: 0, feedback: [] };
+  return trustProfiles.get(userId) || { score: 0, activity: 0, feedback: [] };
 }
 
-/**
- * Palauttaa kaikkien käyttäjien luottamusprofiilit.
- * @returns {Object} - Kaikki käyttäjät ja heidän profiilinsa
- */
+// Hae kaikki käyttäjäprofiilit
 export function getAllTrustProfiles() {
-  return trustProfiles;
+  return Array.from(trustProfiles.entries()).reduce((obj, [userId, profile]) => {
+    obj[userId] = profile;
+    return obj;
+  }, {});
 }
 
-/**
- * Palauttaa listan käyttäjistä, jotka ansaitsevat korkeimman luottamusarvon.
- * @returns {Array} - Lista käyttäjätunnisteista korkeimman luottamuspistemäärän mukaan
- */
+// Hae korkeimman pisteen käyttäjät
 export function getTopTrustProfiles() {
-  return Object.entries(trustProfiles)
+  return Array.from(trustProfiles.entries())
     .sort(([, a], [, b]) => b.score - a.score)
     .map(([userId]) => userId);
 }

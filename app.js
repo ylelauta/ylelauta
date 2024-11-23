@@ -1,93 +1,138 @@
-import * as Y from 'yjs';
-import { WebrtcProvider } from 'y-webrtc';
-import { IndexeddbPersistence } from 'y-indexeddb';
+import * as Y from "./yjs.mjs";
+import { WebsocketProvider } from "./y-websocket.mjs";
 
-// Luo Y.js-dokumentti
-const ydoc = new Y.Doc();
+document.addEventListener("DOMContentLoaded", () => {
+    const threadForm = document.getElementById("new-thread-form");
+    const threadTitle = document.getElementById("thread-title");
+    const threadContent = document.getElementById("thread-content");
+    const threadError = document.getElementById("thread-error");
+    const threadsList = document.getElementById("threads-list");
+    const sortThreads = document.getElementById("sort-threads");
 
-// WebRTC-synkronointi
-const webrtcProvider = new WebrtcProvider('your-room-id', ydoc);
+    // Yjs-dokumentti ja WebSocket-yhteys
+    const yDoc = new Y.Doc();
+    const provider = new WebsocketProvider("ws://localhost:1234", "threads-room", yDoc);
 
-// IndexedDB-persistenssi paikalliseen tallennukseen
-const persistence = new IndexeddbPersistence('distributedApp', ydoc);
+    // Yjs-muutettavat tietorakenteet
+    const threadsMap = yDoc.getMap("threads");
+    const commentsMap = yDoc.getMap("comments");
 
-// Luo CRDT-taulukot
-const messages = ydoc.getArray('messages');
-const votes = ydoc.getArray('votes');
+    // Viestien reaaliaikainen kuuntelu
+    threadsMap.observe(() => renderThreads());
+    commentsMap.observe(() => renderThreads());
 
-// Valitse HTML-elementit
-const messageInput = document.getElementById('new-message');
-const sendButton = document.getElementById('send-message');
-const voteButton = document.getElementById('new-vote');
-const messagesDiv = document.getElementById('messages');
-const voteResults = document.getElementById('vote-results');
+    // Uuden viestiketjun luonti
+    threadForm.addEventListener("submit", (event) => {
+        event.preventDefault();
 
-// Lähetä uusi viesti
-sendButton.addEventListener('click', () => {
-  const content = messageInput.value.trim();
-  if (content) {
-    messages.push([{ id: Date.now(), content }]); // Lisää viesti CRDT-taulukkoon
-    messageInput.value = ''; // Tyhjennä kenttä
-    renderMessages(); // Päivitä näkymä
-  }
-});
+        const title = threadTitle.value.trim();
+        const content = threadContent.value.trim();
 
-// Aloita uusi äänestys
-voteButton.addEventListener('click', () => {
-  const option = prompt("Kirjoita äänestettävä vaihtoehto:");
-  if (option) {
-    const existingVote = votes.find(vote => vote.option === option);
-    if (existingVote) {
-      existingVote.count += 1; // Lisää ääni olemassa olevaan vaihtoehtoon
-    } else {
-      votes.push([{ id: Date.now(), option, count: 1 }]); // Luo uusi vaihtoehto
+        if (!title && !content) {
+            threadError.hidden = false;
+            return;
+        }
+
+        threadError.hidden = true;
+
+        const threadId = Date.now().toString();
+        threadsMap.set(threadId, {
+            id: threadId,
+            title: title || "Ei otsikkoa",
+            content,
+            votes: 0,
+            createdAt: new Date().toISOString(),
+        });
+
+        threadForm.reset();
+    });
+
+    // Päivitä viestiketjut
+    function renderThreads() {
+        threadsList.innerHTML = "";
+        const threads = Array.from(threadsMap.values());
+
+        // Lajittele ketjut
+        const sortedThreads = threads.sort((a, b) => {
+            if (sortThreads.value === "top") {
+                return b.votes - a.votes;
+            } else {
+                return new Date(b.createdAt) - new Date(a.createdAt);
+            }
+        });
+
+        // Renderöi ketjut
+        sortedThreads.forEach((thread) => {
+            const li = document.createElement("li");
+            li.innerHTML = `
+                <h3>${thread.title}</h3>
+                <p>${thread.content}</p>
+                <div class="vote-buttons">
+                    <button data-id="${thread.id}" class="vote-up">+1</button>
+                    <span class="vote-count">${thread.votes}</span>
+                    <button data-id="${thread.id}" class="vote-down">-1</button>
+                </div>
+                <div class="comments-section">
+                    <h4>Kommentit</h4>
+                    <ul id="comments-${thread.id}" class="comments-list"></ul>
+                    <form class="comment-form">
+                        <input type="text" placeholder="Kirjoita kommentti" required>
+                        <button type="submit">Lähetä</button>
+                    </form>
+                </div>
+            `;
+
+            // Lisää kuuntelijat
+            li.querySelector(".vote-up").addEventListener("click", () => updateVotes(thread.id, 1));
+            li.querySelector(".vote-down").addEventListener("click", () => updateVotes(thread.id, -1));
+            li.querySelector(".comment-form").addEventListener("submit", (e) => addComment(e, thread.id));
+
+            renderComments(thread.id); // Renderöi kommentit
+            threadsList.appendChild(li);
+        });
     }
-    renderVotes(); // Päivitä näkymä
-  }
+
+    // Päivitä äänimäärä
+    function updateVotes(threadId, value) {
+        const thread = threadsMap.get(threadId);
+        if (!thread) return;
+
+        thread.votes += value;
+        threadsMap.set(threadId, thread); // Synkronoi Yjs:n kautta
+    }
+
+    // Lisää kommentti
+    function addComment(event, threadId) {
+        event.preventDefault();
+
+        const commentInput = event.target.querySelector("input");
+        const commentText = commentInput.value.trim();
+        if (!commentText) return;
+
+        const comments = commentsMap.get(threadId) || [];
+        comments.push({
+            id: Date.now(),
+            content: commentText,
+            createdAt: new Date().toISOString(),
+        });
+
+        commentsMap.set(threadId, comments);
+        commentInput.value = ""; // Tyhjennä lomake
+    }
+
+    // Päivitä ja näytä kommentit
+    function renderComments(threadId) {
+        const commentsList = document.getElementById(`comments-${threadId}`);
+        const comments = commentsMap.get(threadId) || [];
+        commentsList.innerHTML = "";
+
+        comments.forEach((comment) => {
+            const li = document.createElement("li");
+            li.textContent = comment.content;
+            commentsList.appendChild(li);
+        });
+    }
+
+    // Kuuntelija ketjujen lajitteluun
+    sortThreads.addEventListener("change", renderThreads);
 });
-
-// Renderöi viestit HTML-näkymään
-function renderMessages() {
-  messagesDiv.innerHTML = ''; // Tyhjennä viestialue
-  messages.toArray().forEach(msg => {
-    const p = document.createElement('p');
-    p.textContent = msg.content;
-    messagesDiv.appendChild(p);
-  });
-}
-
-// Renderöi äänestystulokset HTML-näkymään
-function renderVotes() {
-  voteResults.innerHTML = ''; // Tyhjennä tulokset
-  votes.toArray().forEach(vote => {
-    const li = document.createElement('li');
-    li.textContent = `${vote.option} (${vote.count} ääntä)`;
-    voteResults.appendChild(li);
-  });
-}
-
-// Päivitä käyttöliittymän tilat
-async function updateUI() {
-  // Näyteominaisuuksia kuten roolit ja pisteet voidaan päivittää tässä, esim:
-  document.getElementById('user-role').textContent = 'Roolisi: Tarkkailija';
-  document.getElementById('user-score').textContent = 'Pisteesi: 10';
-  document.getElementById('uptime-status').textContent = 'Ylläpitoaika: 5h';
-}
-
-// Synkronoi data ja alusta käyttöliittymä
-persistence.on('synced', () => {
-  console.log('Paikallinen tallennus synkronoitu.');
-  renderMessages();
-  renderVotes();
-});
-
-webrtcProvider.on('synced', () => {
-  console.log('WebRTC-synkronointi valmis.');
-  renderMessages();
-  renderVotes();
-});
-
-// Ensimmäinen renderöinti
-renderMessages();
-renderVotes();
-updateUI();

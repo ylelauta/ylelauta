@@ -16,7 +16,8 @@ sendButton.addEventListener('click', async () => {
     await syncWithPeers();
     renderMessages();
     messageInput.value = '';
-  }
+  renderMessages();
+}
 });
 
 // Aloita uusi äänestys

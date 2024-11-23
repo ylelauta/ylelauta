@@ -3,15 +3,12 @@ import * as Y from 'yjs';
 import { getMerkleRoot, verifyItem } from './merkle.js';
 import { saveMessage, getMessages, saveVote, getVotes } from './database.js';
 
-// Luo Y.js-dokumentti
-const ydoc = new Y.Doc();
-
-// WebRTC-synkronointi
-const provider = new WebrtcProvider('room-id', ydoc);
-
-// CRDT-taulukot viesteille ja äänestyksille
-const messages = ydoc.getArray('messages');
-const votes = ydoc.getArray('votes');
+// Y.js dokumentti ja synkronointi
+const ydoc = new Y.Doc(); // Luo Y.js-dokumentti
+const provider = new WebrtcProvider('room-id', ydoc); // WebRTC-synkronointi
+const peers = {}; // Aktiiviset vertaisverkko-yhteydet
+const messages = ydoc.getArray('messages'); // CRDT-taulukot viesteille
+const votes = ydoc.getArray('votes'); // ja äänestyksille
 
 // Kuuntele Y.js-päivityksiä
 messages.observe(() => renderMessages());

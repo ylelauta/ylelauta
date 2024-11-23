@@ -1,94 +1,67 @@
-import crypto from 'crypto';
-
-let uptimeLog = []; // Lokitieto ylläpitoajoista
-let merkleTree = []; // Merkle-puu
-
-/**
- * Lisää ylläpitoaika lokiin ja päivittää Merkle-puun.
- * @param {string} nodeId - Solmun yksilöllinen tunniste
- * @param {number} uptime - Solmun ylläpitoaika tunteina
- */
-export function logUptime(nodeId, uptime) {
-  const timestamp = Date.now();
-  const logEntry = { nodeId, uptime, timestamp };
-  uptimeLog.push(logEntry);
-  updateMerkleTree(uptimeLog);
+// Lasketaan SHA-256 hash annetulle datalle
+async function hashData(data) {
+  const encoder = new TextEncoder();
+  const encodedData = encoder.encode(data);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encodedData);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
 }
 
-/**
- * Palauttaa solmun ylläpitoajan kokonaismäärän.
- * @param {string} nodeId - Solmun yksilöllinen tunniste
- * @returns {number} - Ylläpitoaika tunteina
- */
-export function calculateUptime(nodeId) {
-  return uptimeLog
-    .filter((entry) => entry.nodeId === nodeId)
-    .reduce((sum, entry) => sum + entry.uptime, 0);
-}
+// Rakentaa Merkle-puun annetuista lehdistä
+export async function buildMerkleTree(leaves) {
+  // Hashataan kaikki lehdet
+  const hashedLeaves = await Promise.all(leaves.map((leaf) => hashData(leaf)));
 
-/**
- * Päivittää Merkle-puun annetun datan perusteella.
- * @param {Array} data - Syötetiedot (esim. uptime-logit)
- */
-export function updateMerkleTree(data) {
-  const hashes = data.map((item) => hashItem(item));
-  merkleTree = buildMerkleTree(hashes);
-}
+  // Rakennetaan puu
+  let currentLevel = hashedLeaves;
 
-/**
- * Palauttaa Merkle-puun juurihakemiston.
- * @returns {string} - Juurihakemiston hash
- */
-export function getMerkleRoot() {
-  return merkleTree[0] || null;
-}
-
-/**
- * Tarkistaa, onko tietty dataosa olemassa Merkle-puussa.
- * @param {Object} item - Tarkistettava dataosa
- * @returns {boolean} - Totuusarvo, löytyykö data puusta
- */
-export function verifyItem(item) {
-  const itemHash = hashItem(item);
-  return merkleTree.includes(itemHash);
-}
-
-/**
- * Luo yksittäisen dataosan hash SHA-256-algoritmilla.
- * @param {Object} item - Hashattava dataosa
- * @returns {string} - Dataosan hash
- */
-function hashItem(item) {
-  return crypto.createHash('sha256').update(JSON.stringify(item)).digest('hex');
-}
-
-/**
- * Rakentaa Merkle-puun hash-listasta.
- * @param {Array} hashes - Alkuperäiset hashit
- * @returns {Array} - Merkle-puu
- */
-function buildMerkleTree(hashes) {
-  if (hashes.length === 0) return [];
-  let tree = [...hashes];
-
-  while (tree.length > 1) {
+  while (currentLevel.length > 1) {
     const nextLevel = [];
-    for (let i = 0; i < tree.length; i += 2) {
-      const left = tree[i];
-      const right = tree[i + 1] || '';
-      const combinedHash = hashItem(left + right);
-      nextLevel.push(combinedHash);
+    for (let i = 0; i < currentLevel.length; i += 2) {
+      const left = currentLevel[i];
+      const right = currentLevel[i + 1] || left; // Jos paria ei ole, käytä yksittäistä solmua
+      const combined = await hashData(left + right);
+      nextLevel.push(combined);
     }
-    tree = nextLevel;
+    currentLevel = nextLevel;
   }
 
-  return tree;
+  // Palautetaan juuri ja kaikki tasot
+  return {
+    root: currentLevel[0],
+    levels: [hashedLeaves, ...currentLevel],
+  };
 }
 
-/**
- * Palauttaa ylläpitologin Merkle-puun tilan.
- * @returns {Array} - Ylläpitoloki
- */
-export function getUptimeLog() {
-  return uptimeLog;
+// Validoi tietyn lehden osana Merkle-puuta
+export async function validateMerkleProof(leaf, proof, root) {
+  let computedHash = await hashData(leaf);
+
+  for (const { hash, position } of proof) {
+    if (position === 'left') {
+      computedHash = await hashData(hash + computedHash);
+    } else if (position === 'right') {
+      computedHash = await hashData(computedHash + hash);
+    }
+  }
+
+  return computedHash === root;
 }
+
+// Esimerkki käyttö
+(async () => {
+  const leaves = ['data1', 'data2', 'data3', 'data4'];
+
+  // Rakennetaan Merkle-puu
+  const merkleTree = await buildMerkleTree(leaves);
+  console.log('Merkle-puun juuri:', merkleTree.root);
+
+  // Validoidaan yksi lehti
+  const proof = [
+    { hash: await hashData('data2'), position: 'right' },
+    { hash: await hashData(await hashData('data3') + await hashData('data4')), position: 'right' },
+  ];
+  const isValid = await validateMerkleProof('data1', proof, merkleTree.root);
+  console.log(`Validointi ${isValid ? 'onnistui' : 'epäonnistui'}`);
+})();
